@@ -134,6 +134,20 @@ class WSHandler(tornado.websocket.WebSocketHandler):
 def start_server():
     asyncio.set_event_loop(asyncio.new_event_loop())
     application = tornado.web.Application([(r'/ws', WSHandler),])
+    env = os.environ
+    if "SSL_HOSTNAME" in env: # "SSL_CERTFILE" in env:
+        # "/etc/letsencrypt/live/taulec.zapto.org/fullchain.pem",
+        # "/etc/letsencrypt/live/taulec.zapto.org/privkey.pem"
+        fqdn = env["SSL_HOSTNAME"]
+        certfile = "/etc/pki/tls/certs/{fqdn}/{fqdn}.crt".format(fqdn=fqdn)
+        keyfile = "/etc/pki/tls/certs/{fqdn}/{fqdn}.key".format(fqdn=fqdn)
+        certfile = env.get("SSL_CERTFILE", certfile)
+        keyfile = env.get("SSL_KEYFILE", keyfile)
+        ssl_options={"certfile": certfile, "keyfile": keyfile}
+        http_server = tornado.httpserver.HTTPServer(application,
+                                                    ssl_options=ssl_options)
+    else:
+        http_server = tornado.httpserver.HTTPServer(application)
     http_server = tornado.httpserver.HTTPServer(application)
     http_server.listen(__SOCKET_PORT)
     Log = logging.getLogger('tornado.access')
